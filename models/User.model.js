@@ -9,7 +9,11 @@ const Schema = mongoose.Schema;
 */
 
 const clientSchema = new Schema({
-  // TODO: write the schema
+  name:{type:String},
+  email:{type:String},
+  favorites: [{type: Schema.Types.ObjectId, ref: 'Recipe'}],
+  dislikes: [{type: Schema.Types.ObjectId, ref: 'Recipe'}]
+
 });
 
 const ClientModel = mongoose.model("Client", clientSchema);

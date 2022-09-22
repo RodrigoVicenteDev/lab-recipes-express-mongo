@@ -1,3 +1,12 @@
-//Faça a conexão com o banco de dados (mongoDB) aqui
+const mongoose = require("mongoose");
 
-//Não se esqueça de exportar a função
+async function connect() {
+  try {
+    const dbCOnnection = await mongoose.connect(process.env.MONGODB_URI);
+    console.log("Conectado ao db")
+  } catch (error) {
+    console.log("Conexão com o banco de dados com erro", error);
+  }
+}
+
+module.exports = connect;
