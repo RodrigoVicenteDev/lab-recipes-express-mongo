@@ -1,15 +1,73 @@
 const express = require("express");
 const router = express.Router();
+const bcrypt = require("bcrypt");
+const saltRounds = 10;
+const generateToken = require('../config/jwt.config')
+const isAuth = require("../middlewares/isAuth");
 
 const RecipeModel = require("../models/Recipe.model");
 const UserModel = require("../models/User.model");
+const attachCurrentUser = require("../middlewares/attachCurrentUser");
 
 //1º rota: Criar um user
 
-router.post("/create", async (req, res) => {
+router.post("/sign-up", async (req, res) => {
   try {
-    const newUser = await UserModel.create({ ...req.body });
-    return res.status(200).json(newUser);
+    const { password } = req.body;
+
+    if (
+      !password ||
+      !password.match(
+        /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[$*&@#_!])[0-9a-zA-Z$*&@#_!]{8,}$/
+      )
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Senha não atende aos parâmetros de segurança" });
+    }
+
+    const salt = await bcrypt.genSalt(saltRounds);
+    const passwordHash = await bcrypt.hash(password, salt);
+    const newUser = await UserModel.create({
+      ...req.body,
+      passwordHash: passwordHash,
+    });
+    delete newUser._doc.passwordHash;
+    return res.status(201).json(newUser);
+  } catch (error) {
+    console.log(error);
+    return res.status(400).json(error);
+  }
+});
+
+router.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res
+        .status(400)
+        .json({ message: "Por favor, informe seu email e senha! " });
+    }
+
+    const user = await UserModel.findOne({ email: email });
+    if (!user) {
+      return res
+        .status(400)
+        .json({ message: "Usuário não encontrado no banco de dados" });
+    }
+
+    if(await bcrypt.compare(password, user.passwordHash)){
+      delete user._doc.passwordHash
+      const token = generateToken(user)
+      return res.status(200).json({
+        user: user,
+        token: token,
+      })
+    }
+    else {
+     
+      return res.status(400).json({ message: "Senha ou email incorretos." });
+    }
   } catch (error) {
     console.log(error);
     return res.status(400).json(error);
@@ -17,7 +75,7 @@ router.post("/create", async (req, res) => {
 });
 
 //2º rota: Pegar todos os users
-router.get("/all", async (req, res) => {
+router.get("/all",  async (req, res) => {
   try {
     const all = await UserModel.find();
     return res.status(200).json(all);
@@ -29,11 +87,10 @@ router.get("/all", async (req, res) => {
 
 //3º rota: Acessar um usuário pelo seu ID
 
-router.get("/user/:id", async (req, res) => {
-  const { id } = req.params;
+router.get("/profile/",isAuth, attachCurrentUser, async (req, res) => {
+  
   try {
-    const byid = await UserModel.findById(id);
-    return res.status(200).json(byid);
+    return res.status(200).json(req.currentUser);
   } catch (error) {
     console.log(error);
     return res.status(400).json(error);
@@ -41,10 +98,10 @@ router.get("/user/:id", async (req, res) => {
 });
 
 //4º Adicionar uma receita na array de favorites
-router.put("/addlike/:idreceita/:iduser", async (req, res) => {
+router.put("/addlike/:idreceita",isAuth, attachCurrentUser, async (req, res) => {
   try {
-    const { idreceita, iduser } = req.params;
-
+    const { idreceita } = req.params;
+    const iduser  = req.currentUser._id
     const addFav = await UserModel.findByIdAndUpdate(
       iduser,
       {
@@ -63,10 +120,10 @@ router.put("/addlike/:idreceita/:iduser", async (req, res) => {
   }
 });
 //5º Adicionar uma receita na array de deslikes
-router.put("/dislike/:idreceita/:iduser", async (req, res) => {
+router.put("/dislike/:idreceita",isAuth, attachCurrentUser, async (req, res) => {
   try {
-    const { idreceita, iduser } = req.params;
-
+    const { idreceita } = req.params;
+    const iduser = req.currentUser._id
     const addFav = await UserModel.findByIdAndUpdate(
       iduser,
       {
@@ -85,8 +142,9 @@ router.put("/dislike/:idreceita/:iduser", async (req, res) => {
 });
 
 //6º Remover uma receita na array de favorite
-router.delete("/deletefav/:userid/:recid", async (req, res) => {
-  const { userid, recid } = req.params;
+router.delete("/deletefav/:recid",isAuth, attachCurrentUser, async (req, res) => {
+  const {  recid} = req.params;
+  const userid = req.currentUser._id
   try {
     const user = await UserModel.findByIdAndUpdate(userid, {
       $pull: { favorites: recid },
@@ -102,8 +160,9 @@ router.delete("/deletefav/:userid/:recid", async (req, res) => {
 });
 
 //7º Remover uma receita na array de deslikes
-router.delete("/deletedeslike/:userid/:recid", async (req, res) => {
-  const { userid, recid } = req.params;
+router.delete("/deletedeslike/:userid",isAuth, attachCurrentUser, async (req, res) => {
+  const {  recid } = req.params;
+  const userid = req.currentUser._id
   try {
     const user = await UserModel.findByIdAndUpdate(
       userid,
