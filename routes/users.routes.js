@@ -154,14 +154,14 @@ router.put(
         { new: true }
       );
 
-      let mailOptions = {
+     /*  let mailOptions = {
         from: process.env.MAIL_USER,
         to: email,
         subject: "Nova receita favoritada",
         html: `<h2>Voce favoritou a receita:</h2><br></br><article>${receita}</article>`
       }
       await transporter.sendMail(mailOptions)
-
+ */
       await RecipeModel.findByIdAndUpdate(idreceita, { $inc: { likes: +1 } });
       return res.status(200).json(addFav);
     } catch (error) {
