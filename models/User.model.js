@@ -17,10 +17,16 @@ const clientSchema = new Schema({
     unique: true,
     match: /[^@ \t\r\n]+@[^@ \t\r\n]+\.[^@ \t\r\n]+/gm,
   },
+  emailConfirm: { type: Boolean, default: false },
   passwordHash: { type: String, required: true },
   role: { type: String, enum: ["USER", "ADMIN"], default: "USER" },
   favorites: [{ type: Schema.Types.ObjectId, ref: "Recipe" }],
   dislikes: [{ type: Schema.Types.ObjectId, ref: "Recipe" }],
+  profilePic: {
+    type: String,
+    default:
+      "https://toppng.com/uploads/preview/instagram-default-profile-picture-11562973083brycehrmyv.png",
+  },
 });
 
 const ClientModel = mongoose.model("Client", clientSchema);

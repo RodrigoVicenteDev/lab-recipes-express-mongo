@@ -14,6 +14,8 @@ app.use("/recipes", RecipesRoute);
 const UserRoute = require("./routes/users.routes");
 app.use("/users", UserRoute);
 
+const UploadRoute = require("./routes/upload")
+app.use("/",UploadRoute)
 app.listen(Number(process.env.PORT), () => {
   console.log("Server up and running on port", process.env.PORT);
 });
